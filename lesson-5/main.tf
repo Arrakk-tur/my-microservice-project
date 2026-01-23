@@ -20,4 +20,8 @@ module "ecr" {
   source      = "./modules/ecr"
   ecr_name    = "lesson-5-ecr"
   scan_on_push = true
+
+  # Вставити реальні значення ARN для `cicd_role_arn` та `workload_role_arn` з консолі AWS
+  cicd_role_arn     = ""
+  workload_role_arn = ""
 }

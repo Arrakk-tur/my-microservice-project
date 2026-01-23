@@ -1,3 +1,5 @@
+# Розкоментувати після першої ініціалізації
+
 # terraform {
 #   backend "s3" {
 #     bucket         = "s3-jviaospovjao39458n3949n3"

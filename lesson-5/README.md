@@ -11,9 +11,27 @@
 - `vpc`: Налаштовує мережу, IGW, NAT Gateway та таблиці маршрутизації.
 - `ecr`: Створює репозиторій з політиками доступу.
 
-## Швидкий запуск
-1. **Ініціалізація (Local State):**
-   ```bash
-   terraform init
-   terraform apply
-   ```
+## Запуск
+1. Створити IAM Role для:
+   - CI/CD Role: Повинна мати повний доступ (Push + Pull) для збірки та завантаження образів. Назва `cicd_role_arn`.
+   - Workload Role (наприклад, для EC2 або ECS): Повинна мати доступ тільки на читання (Pull), щоб запускати контейнери.
+   Назва `workload_role_arn`.
+2. Вставити реальні значення ARN для `cicd_role_arn` та `workload_role_arn` у файл `main.tf` 
+3. Ініціалізація (Local State):
+    ```bash
+    terraform init
+    terraform plan
+    terraform apply
+    ```
+4. Після першої ініціалізації розкоментувати вміст файлу `backend.tf`
+5. Оновити:
+    ```bash
+    terraform init -migrate-state
+    ```
+
+## Видалення інфраструктури
+1. Видалити `S3`
+2. Видалення всієї інфраструктури:
+    ```bash
+    terraform destroy
+    ```
