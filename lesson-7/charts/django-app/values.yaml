@@ -1,0 +1,33 @@
+replicaCount: 2
+
+image:
+  repository: "" # Сюди вставити URL з outputs ECR модуля
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPU: 70
+
+env:
+  DEBUG: "1"
+  SECRET_KEY: "django-insecure-975z@8)1!8b6hf-#fn6^wb#6c%h2mk^*i=)ef-(g!66o^num%i"
+  DATABASE_NAME: "my_best_db"
+  DATABASE_USER: "postgres_user"
+  DATABASE_PASSWORD: "postgres_password"
+  DATABASE_HOST: "db"
+  DATABASE_PORT: "5432"
