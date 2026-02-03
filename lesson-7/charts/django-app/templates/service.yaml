@@ -4,6 +4,9 @@ metadata:
   name: {{ include "django-app.fullname" . }}
   labels:
     {{- include "django-app.labels" . | nindent 4 }}
+  annotations:
+    # Створює Network Load Balancer (сучасний стандарт AWS)
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   type: {{ .Values.service.type }}
   ports:

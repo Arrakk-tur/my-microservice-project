@@ -28,6 +28,19 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "django-app.fullname" . }}-config
+            - secretRef:
+                name: {{ include "django-app.fullname" . }}-synced-secrets # Посилаємось на секрет з пункту 2
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "django-app.fullname" . }}-aws-secrets
           # Важливо для роботи HPA:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

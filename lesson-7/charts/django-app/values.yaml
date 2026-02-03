@@ -23,11 +23,17 @@ autoscaling:
   maxReplicas: 6
   targetCPU: 70
 
+# Секція для секретів (значення прийдуть з Terraform)
+secrets:
+  secretKey: ""
+  dbPassword: ""
+
 env:
   DEBUG: "1"
-  SECRET_KEY: "django-insecure-975z@8)1!8b6hf-#fn6^wb#6c%h2mk^*i=)ef-(g!66o^num%i"
+  USE_AWS_S3: "1"
+  AWS_STORAGE_BUCKET_NAME:  # Зміни на назву з Terraform
+  ALLOWED_HOSTS: "*" # Для тесту, пізніше замінити на DNS балансувальника
   DATABASE_NAME: "my_best_db"
   DATABASE_USER: "postgres_user"
-  DATABASE_PASSWORD: "postgres_password"
   DATABASE_HOST: "db"
   DATABASE_PORT: "5432"
