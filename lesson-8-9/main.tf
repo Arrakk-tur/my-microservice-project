@@ -17,6 +17,23 @@ resource "aws_secretsmanager_secret_version" "django_secrets_val" {
   })
 }
 
+resource "kubernetes_secret" "argocd_repo_creds" {
+  metadata {
+    name      = "my-repo-creds"
+    namespace = "argocd"
+    labels = {
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
+  }
+
+  data = {
+    type     = "git"
+    url      = "https://github.com/your-user/your-monorepo.git"
+    password = "YOUR_GITHUB_TOKEN" # Твій токен
+    username = "your-user"
+  }
+}
+
 # Підключаємо модуль S3 та DynamoDB
 module "s3_backend" {
   source      = "./modules/s3-backend"
@@ -55,6 +72,21 @@ module "eks" {
   subnet_ids = module.vpc.private_subnet_ids
 }
 
+module "jenkins" {
+  source            = "./modules/jenkins"
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+  kubeconfig        = "~/.kube/config"
+}
+
+# Підключаємо модуль Argo_CD
+module "argo_cd" {
+  source       = "./modules/argo-cd"
+  namespace    = "argocd"
+  chart_version = "5.46.4"
+}
+
 # Налаштування провайдерів для роботи з K8s через Terraform
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
@@ -85,32 +117,6 @@ resource "helm_release" "metrics_server" {
   chart      = "metrics-server"
   namespace  = "kube-system"
   depends_on = [module.eks]
-}
-
-# Розгортання Django
-resource "helm_release" "django_app" {
-  name       = "django-release"
-  chart      = "./charts/django-app" # Шлях до чарту
-  namespace  = "default"
-  wait       = true
-  timeout    = 600
-
-  # Передаємо динамічні дані з Terraform у values.yaml
-  set {
-    name  = "image.repository"
-    value = module.ecr.repository_url
-  }
-
-  set {
-    name  = "image.tag"
-    value = "latest"
-  }
-
-  depends_on = [
-    module.eks,
-    helm_release.metrics_server,
-    module.ecr
-  ]
 }
 
 # Встановлення Secrets Store CSI Driver

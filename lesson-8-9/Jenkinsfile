@@ -1,0 +1,58 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins-sa
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command: ["sleep"]
+    args: ["9999999"]
+    env:
+    - name: AWS_SDK_LOAD_CONFIG
+      value: "true"
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+"""
+        }
+    }
+
+    parameters {
+        string(name: 'ECR_URL', defaultValue: 'ваше_id.dkr.ecr.eu-north-1.amazonaws.com/lesson-7-ecr', description: 'ECR Repository URL')
+        string(name: 'REPO_URL', defaultValue: 'github.com/your-user/your-monorepo.git', description: 'Git Ops Repo URL')
+    }
+
+    stages {
+        stage('Build & Push') {
+            when { changeset "django/**" }
+            steps {
+                container('kaniko') {
+                    sh "/kaniko/executor --context ${WORKSPACE}/django --dockerfile ${WORKSPACE}/django/Dockerfile --destination ${params.ECR_URL}:${BUILD_NUMBER} --destination ${params.ECR_URL}:latest"
+                }
+            }
+        }
+
+        stage('Update Git Manifest') {
+            when { changeset "django/**" }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GIT_TOKEN', usernameVariable: 'GIT_USER')]) {
+                    sh """
+                        git config user.email "jenkins@example.com"
+                        git config user.name "Jenkins CI"
+
+                        # Оновлюємо ECR URL (якщо він раптом змінився) та Tag
+                        sed -i 's|repository: .*|repository: "${params.ECR_URL}"|' charts/django-app/values.yaml
+                        sed -i 's/tag: .*/tag: "${BUILD_NUMBER}"/' charts/django-app/values.yaml
+
+                        git add charts/django-app/values.yaml
+                        git commit -m "chore: update image tag to ${BUILD_NUMBER} [skip ci]"
+                        git push https://${GIT_USER}:${GIT_TOKEN}@${params.REPO_URL} HEAD:main
+                    """
+                }
+            }
+        }
+    }
+}

@@ -11,6 +11,30 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
   role       = aws_iam_role.eks_cluster.name
 }
 
+# Роль для Django Pod
+resource "aws_iam_role" "django_pod_role" {
+  name = "django-app-irsa"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { Federated = module.eks.oidc_provider_arn }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${replace(module.eks.oidc_provider_url, "https://", "")}:sub": "system:serviceaccount:default:django-app-sa"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "django_secrets_ptr" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSecretsManagerReadWrite" # Або кастомна вужча політика
+  role       = aws_iam_role.django_pod_role.name
+}
+
 resource "aws_eks_cluster" "main" {
   name     = "django-cluster"
   role_arn = aws_iam_role.eks_cluster.arn
@@ -56,4 +80,21 @@ resource "aws_eks_node_group" "main" {
   instance_types = ["t3.medium"]
 
   depends_on = [aws_iam_role_policy_attachment.node_policies]
+}
+
+# Вмикаємо OIDC для IRSA
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+# Додаємо EBS CSI Driver Addon (необхідно для StorageClass)
+resource "aws_eks_addon" "ebs_csi" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "aws-ebs-csi-driver"
 }
