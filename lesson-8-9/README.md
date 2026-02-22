@@ -19,7 +19,19 @@
 - `django`: Код Django-застосунку та Dockerfile.
 
 ## Кроки розгортання
-### Крок 1: Підготовка Backend (S3 + DynamoDB)
+
+### Крок 1: Налаштування змінних
+
+Відредагуйте файли, вказавши ваші актуальні дані:
+**`./variables.tf`**:
+- `aws_region`: Регіон (наприклад, `eu-north-1`).
+- `s3_bucket_name`: Унікальне ім'я для Terraform Backend.
+- `git_repo`: URL вашого репозиторію.
+- `git_token`: Персональний токен доступу GitHub (PAT).
+- `django_secret` та `django_db_pswd`: Секрети для застосунку.
+
+
+### Крок 2: Підготовка Backend (S3 + DynamoDB)
 
 Для безпечного зберігання `terraform.tfstate` необхідно спочатку створити кошик S3 та таблицю DynamoDB.
 
@@ -31,19 +43,22 @@
    ```
 3. Розкоментуйте блок у `backend.tf` та виконайте `terraform init` знову, щоб перенести стейт у хмару.
 
-### Крок 2: Створення інфраструктури EKS та ECR
+### Крок 3: Створення основної інфраструктури
 Створіть EKS, ECR та всі допоміжні сервіси:
    ```bash
    terraform apply
    ```
+   
+*Після завершення Terraform виведе URL-адреси та назви ресурсів.*
 
-### Крок 3: Налаштування доступу до кластера
+
+### Крок 4: Налаштування доступу до кластера
 Під'єднайтесь до створеного кластера EKS:
    ```bash
-   aws eks update-kubeconfig --region eu-north-1 --name django-cluster
+   aws eks update-kubeconfig --region $(terraform output -raw aws_region) --name $(terraform output -raw cluster_name)
    ```
 
-### Крок 4: Налаштування Jenkins
+### Крок 5: Налаштування Jenkins
 1. Отримайте URL Jenkins:
    ```bash
    kubectl get svc -n jenkins jenkins -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
@@ -52,9 +67,22 @@
    ```bash
    kubectl exec -n jenkins -it svc/jenkins -c jenkins -- cat /var/jenkins_home/secrets/initialAdminPassword
    ```
-3. Налаштування Credentials: Створіть запис Username with password з ID `github-token`.
+3. Налаштування Credentials:
+В інтерфейсі Jenkins перейдіть до *Manage Jenkins -> Credentials* та створіть:
+   - **ID**: `github-token` (тип: Username with password).
+   - **Username**: Ваш GitHub логін.
+   - **Password**: Ваш GitHub PAT.
 
-### Крок 5: Налаштування Argo CD
+### Крок 6: Запуск CI/CD Workflow
+1. Створіть у Jenkins нову **Pipeline** job.
+2. Вкажіть посилання на ваш репозиторій та шлях до `Jenkinsfile`.
+3. Запустіть збірку. 
+   - **Build & Push**: Jenkins запустить Pod Agent з Kaniko, змонтує IRSA роль, збере образ та заштовхне його в ECR.
+   - **Update Git**: Jenkins оновить тег образу в `charts/django-app/values.yaml` та зробить `git push`.
+
+### Крок 7: Налаштування Argo CD
+Argo CD автоматично розгортає застосунок, як тільки бачить зміни в Helm-чарті.
+
 1. Отримайте URL Argo CD:
    ```bash
    kubectl get svc -n argocd argo-cd-server -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
@@ -64,8 +92,22 @@
    kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
    ```
 
-## Видалення ресурсів
+### Перевірка результату
+- У консолі Argo CD ви побачите додаток `django-app`.
+- Після завершення синхронізації (Status: **Synced**), отримайте URL вашого Django застосунку:
+  ```bash
+  kubectl get svc django-app-django-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+  ```
 
+## Обслуговування та видалення
+
+### Перевірка логів застосунку
+```bash
+kubectl logs -l app.kubernetes.io/name=django-app -f
+```
+
+### Видалення всіх ресурсів
+Щоб уникнути зайвих витрат в AWS, виконайте:
 ```bash
 terraform destroy
 ```

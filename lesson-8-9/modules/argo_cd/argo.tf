@@ -16,7 +16,7 @@ resource "helm_release" "argo_apps" {
   name       = "${var.name}-apps"
   chart      = "${path.module}/charts"
   namespace  = var.namespace
-  create_namespace = false
+  create_namespace = true
 
   values = [
     file("${path.module}/values.yaml")

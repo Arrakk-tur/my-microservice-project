@@ -14,16 +14,17 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
 # Роль для Django Pod
 resource "aws_iam_role" "django_pod_role" {
   name = "django-app-irsa"
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
-      Principal = { Federated = module.eks.oidc_provider_arn }
+      # Звертаємося до ресурсу НАПРЯМУ, а не через module.eks
+      Principal = { Federated = aws_iam_openid_connect_provider.eks.arn }
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
-          "${replace(module.eks.oidc_provider_url, "https://", "")}:sub": "system:serviceaccount:default:django-app-sa"
+          # Використовуємо локальну змінну issuer
+          "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub": "system:serviceaccount:default:django-app-sa"
         }
       }
     }]

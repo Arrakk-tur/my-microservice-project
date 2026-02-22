@@ -1,5 +1,13 @@
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "2.38.0"
+    }
+  }
+}
 # Створюємо Namespace
-resource "kubernetes_namespace" "jenkins" {
+resource "kubernetes_namespace_v1" "jenkins" {
   metadata { name = "jenkins" }
 }
 
@@ -41,7 +49,7 @@ type = "gp3"
 }
 
 # ServiceAccount з анотацією для AWS
-resource "kubernetes_service_account" "jenkins_sa" {
+resource "kubernetes_service_account_v1" "jenkins_sa" {
   metadata {
     name      = "jenkins-sa"
     namespace = kubernetes_namespace.jenkins.metadata[0].name
@@ -49,28 +57,6 @@ resource "kubernetes_service_account" "jenkins_sa" {
       "eks.amazonaws.com/role-arn" = aws_iam_role.jenkins_kaniko_role.arn
     }
   }
-}
-
-resource "aws_iam_role" "jenkins_kaniko_role" {
-name = "${var.cluster_name}-jenkins-kaniko-role"
-
-assume_role_policy = jsonencode({
-Version = "2012-10-17",
-Statement = [
-{
-Effect = "Allow",
-Principal = {
-  Federated = var.oidc_provider_arn
-},
-Action = "sts:AssumeRoleWithWebIdentity",
-Condition = {
-  StringEquals = {
-    "${replace(var.oidc_provider_url, "https://", "")}:sub" = "system:serviceaccount:jenkins:jenkins-sa"
-  }
-}
-}
-]
-})
 }
 
 resource "aws_iam_role_policy" "jenkins_ecr_policy" {

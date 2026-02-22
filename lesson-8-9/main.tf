@@ -1,4 +1,4 @@
-provider "aws" { region = "eu-north-1" }
+provider "aws" { region = var.aws_region }
 
 # Отримуємо дані про поточного користувача
 data "aws_caller_identity" "current" {}
@@ -10,14 +10,14 @@ resource "aws_secretsmanager_secret" "django_secrets" {
 }
 
 resource "aws_secretsmanager_secret_version" "django_secrets_val" {
-  secret_id     = aws_secretsmanager_secret.django_secrets.id
+  secret_id = aws_secretsmanager_secret.django_secrets.id
   secret_string = jsonencode({
-    SECRET_KEY        = "django-insecure-975z@8)1!8b6vjiasofgua8sf9f8yeq9g8qhwoishjob"
-    DATABASE_PASSWORD = "postgres_password"
+    SECRET_KEY        = var.django_secret
+    DATABASE_PASSWORD = var.django_db_pswd
   })
 }
 
-resource "kubernetes_secret" "argocd_repo_creds" {
+resource "kubernetes_secret_v1" "argocd_repo_creds" {
   metadata {
     name      = "my-repo-creds"
     namespace = "argocd"
@@ -28,16 +28,16 @@ resource "kubernetes_secret" "argocd_repo_creds" {
 
   data = {
     type     = "git"
-    url      = "https://github.com/your-user/your-monorepo.git"
-    password = "YOUR_GITHUB_TOKEN" # Твій токен
-    username = "your-user"
+    url      = var.git_repo
+    password = var.git_token
+    username = var.git_username
   }
 }
 
 # Підключаємо модуль S3 та DynamoDB
 module "s3_backend" {
   source      = "./modules/s3-backend"
-  bucket_name = "s3-jviaospovjao39458n3949n3"
+  bucket_name = var.s3_bucket_name
   table_name  = "terraform-locks"
 }
 
@@ -53,7 +53,7 @@ module "vpc" {
   vpc_cidr_block     = "10.0.0.0/16"
   public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   private_subnets    = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
-  availability_zones = ["eu-north-1a", "eu-north-1b", "eu-north-1c"]
+  availability_zones = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
   vpc_name           = "lesson-5-vpc"
 }
 
@@ -63,7 +63,7 @@ module "ecr" {
   ecr_name          = "lesson-7-ecr"
   scan_on_push      = true
   cicd_role_arn     = data.aws_caller_identity.current.arn
-  workload_role_arn = module.eks.node_role_arn            # Вузли кластера
+  workload_role_arn = module.eks.node_role_arn # Вузли кластера
 }
 
 # Підключаємо модуль EKS
@@ -82,8 +82,8 @@ module "jenkins" {
 
 # Підключаємо модуль Argo_CD
 module "argo_cd" {
-  source       = "./modules/argo-cd"
-  namespace    = "argocd"
+  source        = "./modules/argo_cd"
+  namespace     = "argocd"
   chart_version = "5.46.4"
 }
 
@@ -99,16 +99,22 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-    }
+  kubernetes = {
+    config_path = "~/.kube/config"
   }
 }
+
+# provider "helm" {
+#   kubernetes = {
+#     host                   = module.eks.cluster_endpoint
+#     cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+#     exec = {
+#       api_version = "client.authentication.k8s.io/v1beta1"
+#       command     = "aws"
+#       args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+#     }
+#   }
+# }
 
 # Встановлюємо Metrics Server
 resource "helm_release" "metrics_server" {
