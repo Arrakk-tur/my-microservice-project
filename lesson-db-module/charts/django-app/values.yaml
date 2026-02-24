@@ -1,0 +1,52 @@
+replicaCount: 2
+
+image:
+  # Цей рядок буде оновлено пайплайном Jenkins
+  repository: "722326487497.dkr.ecr.eu-north-1.amazonaws.com/lesson-7-ecr"
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+  # Анотація для створення Network Load Balancer (NLB) в AWS
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPU: 70
+
+# Секція для секретів (значення приходять через Secrets Manager)
+secrets:
+  # Назва секрету в AWS Secrets Manager (створено в main.tf)
+  secretName: "django-app-secrets-v2"
+
+env:
+  DEBUG: "0"
+  USE_AWS_S3: "1"
+  # Буде заповнено через Terraform або ConfigMap
+  AWS_STORAGE_BUCKET_NAME: "my-django-static-assets-ID"
+  ALLOWED_HOSTS: "*"
+  DATABASE_NAME: "my_best_db"
+  DATABASE_USER: "postgres_user"
+  DATABASE_HOST: "db-service-name" # Якщо БД в кластері
+  DATABASE_PORT: "5432"
+
+# Важливо для IRSA (щоб под мав права на S3 та Secrets Manager)
+serviceAccount:
+  create: true
+  name: "django-app-sa"
+  annotations:
+    # ARN ролі, яку ми створили в модулі EKS
+    eks.amazonaws.com/role-arn: "arn:aws:iam::722326487497:role/django-app-irsa"
