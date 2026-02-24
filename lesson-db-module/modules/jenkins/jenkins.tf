@@ -52,7 +52,7 @@ type = "gp3"
 resource "kubernetes_service_account_v1" "jenkins_sa" {
   metadata {
     name      = "jenkins-sa"
-    namespace = kubernetes_namespace.jenkins.metadata[0].name
+    namespace = kubernetes_namespace_v1.jenkins.metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.jenkins_kaniko_role.arn
     }
@@ -86,7 +86,7 @@ Resource = "*"
 resource "helm_release" "jenkins" {
 name             = "jenkins"
 namespace        = "jenkins"
-repository       = "<https://charts.jenkins.io>"
+repository       = "https://charts.jenkins.io"
 chart            = "jenkins"
 version          = "5.8.27"
 create_namespace = true

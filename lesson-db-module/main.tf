@@ -14,6 +14,10 @@ resource "aws_secretsmanager_secret_version" "django_secrets_val" {
   secret_string = jsonencode({
     SECRET_KEY        = var.django_secret
     DATABASE_PASSWORD = var.django_db_pswd
+    DATABASE_HOST     = module.rds.db_endpoint
+    DATABASE_PORT     = module.rds.db_port
+    DATABASE_USER     = "postgres_user"
+    DATABASE_NAME     = "my_best_db"
   })
 }
 
@@ -85,6 +89,24 @@ module "argo_cd" {
   source        = "./modules/argo_cd"
   namespace     = "argocd"
   chart_version = "5.46.4"
+}
+
+# Підключаємо модуль DB (Postgres)
+module "rds" {
+  source          = "./modules/rds"
+  project_name    = "django-app"
+  use_aurora      = false # Можна винести в variables.tf
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnet_ids
+  eks_nodes_sg_id = module.eks.node_security_group_id
+
+  db_name         = "my_best_db"
+  username        = "postgres_user"
+  password        = var.django_db_pswd
+  engine_version  = "13.7"
+  family          = "postgres13"
+  instance_class  = "db.t3.medium"
+  max_connections = "200"
 }
 
 # Налаштування провайдерів для роботи з K8s через Terraform

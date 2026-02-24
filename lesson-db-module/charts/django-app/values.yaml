@@ -38,10 +38,10 @@ env:
   # Буде заповнено через Terraform або ConfigMap
   AWS_STORAGE_BUCKET_NAME: "my-django-static-assets-ID"
   ALLOWED_HOSTS: "*"
-  DATABASE_NAME: "my_best_db"
-  DATABASE_USER: "postgres_user"
-  DATABASE_HOST: "db-service-name" # Якщо БД в кластері
-  DATABASE_PORT: "5432"
+#  DATABASE_NAME: "my_best_db"
+#  DATABASE_USER: "postgres_user"
+#  DATABASE_HOST: "db-service-name" # Якщо БД в кластері
+#  DATABASE_PORT: "5432"
 
 # Важливо для IRSA (щоб под мав права на S3 та Secrets Manager)
 serviceAccount:
