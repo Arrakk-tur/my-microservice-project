@@ -5,22 +5,23 @@ variable "aws_region" {
 
 variable "s3_bucket_name" {
   type        = string
-  description     = "s3-jviaospovjao39458n3949n3"
+  description     = "S3 Bucket name"
 }
 
 variable "git_username" {
   type        = string
-  description     = "GIT_USERNAME"
+  description     = "логін на GitHub "
 }
 
 variable "git_repo" {
   type        = string
-  description     = "https://github.com/git_username/your-monorepo.git"
+  description     = "URL Git репозиторію"
 }
 
 variable "git_token" {
   type      = string
   sensitive = true
+  description = "GitHub Personal Access Token (PAT) з правами на читання/запис репозиторію."
   # default прибрано для безпеки
 }
 
@@ -31,10 +32,11 @@ variable "django_secret" {
 
 variable "django_db_pswd" {
   type        = string
-  description     = "postgres_password"
+  description     = "Пароль для підключення до створеної бази даних"
 }
 
 variable "jenkins_admin_password" {
   type      = string
   sensitive = true
+  description = "Бажаний пароль для доступу до веб-інтерфейсу Jenkins."
 }
