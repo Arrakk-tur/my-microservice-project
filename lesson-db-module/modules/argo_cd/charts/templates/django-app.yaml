@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "https://github.com/your-user/your-monorepo.git"
+    repoURL: {{ .Values.repoURL | quote }} # Тепер береться з Terraform
     targetRevision: HEAD
     path: "charts/django-app" # Шлях до чарту в монорепозиторії
   destination:

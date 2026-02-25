@@ -1,7 +1,7 @@
 controller:
   admin:
     username: admin
-    password: admin123
+    password: {{ .Values.jenkins_admin_password }}
 
   serviceType: LoadBalancer
   servicePort: 80

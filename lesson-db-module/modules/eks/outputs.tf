@@ -8,5 +8,5 @@ output "oidc_provider_url" { value = aws_eks_cluster.main.identity[0].oidc[0].is
 
 output "node_security_group_id" {
   description = "Security Group ID of the EKS nodes"
-  value       = aws_iam_role.node_group.name
+  value       = aws_security_group.eks_nodes_sg.id
 }

@@ -11,6 +11,23 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
   role       = aws_iam_role.eks_cluster.name
 }
 
+resource "aws_security_group" "eks_nodes_sg" {
+  name        = "${aws_eks_cluster.main.name}-node-sg"
+  description = "Security group for all nodes in the cluster"
+  vpc_id      = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    "kubernetes.io/cluster/${aws_eks_cluster.main.name}" = "owned"
+  }
+}
+
 # Роль для Django Pod
 resource "aws_iam_role" "django_pod_role" {
   name = "django-app-irsa"

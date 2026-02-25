@@ -18,9 +18,9 @@ resource "aws_iam_role" "jenkins_kaniko_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Federated = var.oidc_provider_arn },
-      Action = "sts:AssumeRoleWithWebIdentity",
+      Action    = "sts:AssumeRoleWithWebIdentity",
       Condition = {
         StringEquals = {
           "${replace(var.oidc_provider_url, "https://", "")}:sub" = "system:serviceaccount:jenkins:jenkins-sa"
@@ -31,21 +31,21 @@ resource "aws_iam_role" "jenkins_kaniko_role" {
 }
 
 resource "kubernetes_storage_class_v1" "ebs_sc" {
-metadata {
-name = "ebs-sc"
-annotations = {
-"storageclass.kubernetes.io/is-default-class" = "true"
-}
-}
+  metadata {
+    name = "ebs-sc"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
 
-storage_provisioner = "ebs.csi.aws.com"
+  storage_provisioner = "ebs.csi.aws.com"
 
-reclaim_policy       = "Delete"
-volume_binding_mode  = "WaitForFirstConsumer"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "WaitForFirstConsumer"
 
-parameters = {
-type = "gp3"
-}
+  parameters = {
+    type = "gp3"
+  }
 }
 
 # ServiceAccount з анотацією для AWS
@@ -60,39 +60,44 @@ resource "kubernetes_service_account_v1" "jenkins_sa" {
 }
 
 resource "aws_iam_role_policy" "jenkins_ecr_policy" {
-name = "${var.cluster_name}-jenkins-kaniko-ecr-policy"
-role = aws_iam_role.jenkins_kaniko_role.id
+  name = "${var.cluster_name}-jenkins-kaniko-ecr-policy"
+  role = aws_iam_role.jenkins_kaniko_role.id
 
-policy = jsonencode({
-Version = "2012-10-17",
-Statement = [
-{
-Effect = "Allow",
-Action = [
-  "ecr:GetAuthorizationToken",
-  "ecr:BatchCheckLayerAvailability",
-  "ecr:PutImage",
-  "ecr:InitiateLayerUpload",
-  "ecr:UploadLayerPart",
-  "ecr:CompleteLayerUpload",
-  "ecr:DescribeRepositories"
-],
-Resource = "*"
-}
-]
-})
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:DescribeRepositories"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 resource "helm_release" "jenkins" {
-name             = "jenkins"
-namespace        = "jenkins"
-repository       = "https://charts.jenkins.io"
-chart            = "jenkins"
-version          = "5.8.27"
-create_namespace = true
+  name             = "jenkins"
+  namespace        = "jenkins"
+  repository       = "https://charts.jenkins.io"
+  chart            = "jenkins"
+  version          = "5.8.27"
+  create_namespace = true
 
-values = [
-file("${path.module}/values.yaml")
-]
+  values = [
+    file("${path.module}/values.yaml")
+  ]
 
+  # Перевизначаємо пароль із values.yaml безпечним методом
+  set_sensitive {
+    name  = "controller.admin.password"
+    value = var.admin_password
+  }
 }

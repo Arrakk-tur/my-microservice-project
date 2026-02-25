@@ -18,8 +18,12 @@ resource "helm_release" "argo_apps" {
   namespace  = var.namespace
   create_namespace = true
 
-  values = [
-    file("${path.module}/values.yaml")
-  ]
+  set {
+    name  = "repoURL"
+    value = var.git_repo
+  }
+  # values = [
+  #   file("${path.module}/values.yaml")
+  # ]
   depends_on = [helm_release.argo_cd]
 }

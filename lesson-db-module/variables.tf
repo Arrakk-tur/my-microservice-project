@@ -19,8 +19,9 @@ variable "git_repo" {
 }
 
 variable "git_token" {
-  type        = string
-  description     = "YOUR_GITHUB_TOKEN"
+  type      = string
+  sensitive = true
+  # default прибрано для безпеки
 }
 
 variable "django_secret" {
@@ -31,4 +32,9 @@ variable "django_secret" {
 variable "django_db_pswd" {
   type        = string
   description     = "postgres_password"
+}
+
+variable "jenkins_admin_password" {
+  type      = string
+  sensitive = true
 }
