@@ -76,19 +76,47 @@ module "eks" {
   subnet_ids = module.vpc.private_subnet_ids
 }
 
+# Підключаємо модуль Jenkins
 module "jenkins" {
   source            = "./modules/jenkins"
   cluster_name      = module.eks.cluster_name
   oidc_provider_arn = module.eks.oidc_provider_arn
   oidc_provider_url = module.eks.oidc_provider_url
-  kubeconfig        = "~/.kube/config"
+  admin_password    = var.jenkins_admin_password
+  git_username      = var.git_username
+  git_token         = var.git_token
 }
 
 # Підключаємо модуль Argo_CD
 module "argo_cd" {
-  source        = "./modules/argo_cd"
-  namespace     = "argocd"
-  chart_version = "5.46.4"
+  source         = "./modules/argo_cd"
+  namespace      = "argocd"
+  chart_version  = "5.46.4"
+  git_repo       = var.git_repo
+  s3_bucket_name = aws_s3_bucket.static_assets.id
+  cluster_name   = module.eks.cluster_name
+  aws_region     = var.aws_region
+}
+
+# Розгортання моніторингу Prometheus & Grafana
+resource "kubernetes_namespace_v1" "monitoring" {
+  metadata { name = "monitoring" }
+}
+
+resource "helm_release" "prometheus_stack" {
+  name       = "kube-prometheus-stack"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "kube-prometheus-stack"
+  namespace  = kubernetes_namespace_v1.monitoring.metadata[0].name
+  version    = "65.2.0" # Стабільна версія
+
+  # Вимикаємо дефолтні правила, якщо вузлів мало (економить ресурси t3.medium)
+  set {
+    name  = "defaultRules.create"
+    value = "false"
+  }
+
+  depends_on = [module.eks]
 }
 
 # Підключаємо модуль DB (Postgres)
@@ -121,8 +149,14 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes = {
-    config_path = "~/.kube/config"
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    }
   }
 }
 

@@ -12,6 +12,19 @@ resource "helm_release" "argo_cd" {
   create_namespace = true
 }
 
+# Скрипт перевірки готовності CRD
+resource "null_resource" "wait_for_argo_crds" {
+  depends_on = [helm_release.argo_cd]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      aws eks update-kubeconfig --region ${var.aws_region} --name ${var.cluster_name}
+      echo "Очікування реєстрації Application CRD..."
+      kubectl wait --for condition=established --timeout=120s crd/applications.argoproj.io
+    EOT
+  }
+}
+
 resource "helm_release" "argo_apps" {
   name       = "${var.name}-apps"
   chart      = "${path.module}/charts"
@@ -25,5 +38,5 @@ resource "helm_release" "argo_apps" {
   # values = [
   #   file("${path.module}/values.yaml")
   # ]
-  depends_on = [helm_release.argo_cd]
+  depends_on = [null_resource.wait_for_argo_crds]
 }

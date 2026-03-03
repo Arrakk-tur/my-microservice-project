@@ -20,3 +20,11 @@ variable "git_repo" {
   type        = string
   description = "Repository URL for Argo CD Applications"
 }
+
+variable "s3_bucket_name" {
+  description = "Динамічне ім'я S3 бакета для статики Django"
+  type        = string
+}
+
+variable "cluster_name" { type = string }
+variable "aws_region" { type = string }

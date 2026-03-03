@@ -100,4 +100,26 @@ resource "helm_release" "jenkins" {
     name  = "controller.admin.password"
     value = var.admin_password
   }
+
+  # Увімкнення JCasC для автоматичного створення GitHub Credentials
+  set {
+    name  = "controller.JCasC.defaultConfig"
+    value = "true"
+  }
+
+  set_sensitive {
+    name  = "controller.JCasC.configScripts.credentials"
+    value = <<EOT
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-token"
+              username: "${var.git_username}"
+              password: "${var.git_token}"
+              description: "GitHub Token for GitOps automated by Terraform"
+EOT
+  }
 }
