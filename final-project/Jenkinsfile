@@ -18,7 +18,7 @@ spec:
     }
 
     parameters {
-        string(name: 'ECR_URL', defaultValue: '722326487497.dkr.ecr.eu-north-1.amazonaws.com/lesson-7-ecr', description: 'ECR Repository URL')
+        string(name: 'ECR_URL', defaultValue: '722326487497.dkr.ecr.eu-north-1.amazonaws.com/fp-ecr', description: 'ECR Repository URL')
         string(name: 'REPO_URL', defaultValue: 'github.com/your-user/your-monorepo.git', description: 'Git Ops Repo URL')
     }
 

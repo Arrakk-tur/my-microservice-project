@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   # Цей рядок буде оновлено пайплайном Jenkins
-  repository: "722326487497.dkr.ecr.eu-north-1.amazonaws.com/lesson-7-ecr"
+  repository: "722326487497.dkr.ecr.eu-north-1.amazonaws.com/fp-ecr"
   pullPolicy: IfNotPresent
   tag: "latest"
 
@@ -30,7 +30,7 @@ autoscaling:
 # Секція для секретів (значення приходять через Secrets Manager)
 secrets:
   # Назва секрету в AWS Secrets Manager (створено в main.tf)
-  secretName: "django-app-secrets-v2"
+  secretName: "django-app-secrets-v3"
 
 env:
   DEBUG: "0"

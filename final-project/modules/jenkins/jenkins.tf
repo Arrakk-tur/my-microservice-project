@@ -96,20 +96,14 @@ resource "helm_release" "jenkins" {
   ]
 
   # Перевизначаємо пароль із values.yaml безпечним методом
-  set_sensitive {
-    name  = "controller.admin.password"
-    value = var.admin_password
-  }
-
-  # Увімкнення JCasC для автоматичного створення GitHub Credentials
-  set {
-    name  = "controller.JCasC.defaultConfig"
-    value = "true"
-  }
-
-  set_sensitive {
-    name  = "controller.JCasC.configScripts.credentials"
-    value = <<EOT
+  set_sensitive = [
+    {
+      name  = "controller.admin.password"
+      value = var.admin_password
+    },
+    {
+      name  = "controller.JCasC.configScripts.credentials"
+      value = <<EOT
 credentials:
   system:
     domainCredentials:
@@ -121,5 +115,12 @@ credentials:
               password: "${var.git_token}"
               description: "GitHub Token for GitOps automated by Terraform"
 EOT
-  }
+    }
+  ]
+
+  # Увімкнення JCasC для автоматичного створення GitHub Credentials
+  set = [{
+    name  = "controller.JCasC.defaultConfig"
+    value = "true"
+  }]
 }

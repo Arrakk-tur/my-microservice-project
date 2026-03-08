@@ -13,7 +13,7 @@ spec:
       parameters:
         # Передаємо створений S3 бакет безпосередньо в конфігурацію Django
         - name: "env.AWS_STORAGE_BUCKET_NAME"
-          value: { { .Values.s3BucketName | quote } }
+          value: {{ .Values.s3BucketName | quote }}
   destination:
     server: https://kubernetes.default.svc
     namespace: default

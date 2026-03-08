@@ -1,10 +1,10 @@
 # Розкоментувати після першої ініціалізації
-#
+
 # terraform {
 #   backend "s3" {
-#     bucket         = var.s3_bucket_name
-#     key            = "lesson-7/terraform.tfstate"
-#     region         = var.aws_region
+#     bucket         = "s3-jviaospovgrst64574y3t33949n3"
+#     key            = "final-project/terraform.tfstate"
+#     region         = "eu-north-1"
 #     dynamodb_table = "terraform-locks"
 #     encrypt        = true
 #   }

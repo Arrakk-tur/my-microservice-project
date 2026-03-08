@@ -1,4 +1,4 @@
-# Agro CD + CD (Lesson 8-9)
+# Final Project
 ## Опис проєкту
 Цей проєкт розгортає інфраструктуру в AWS, що включає:
 - **S3 Backend**: для безпечного зберігання стану (`terraform.tfstate`).
@@ -8,6 +8,7 @@
 - **EKS**: Kubernetes кластер.
 - **Jenkins**: CI-інструмент, що використовує Kubernetes Pod Agents (Kaniko) для безпечної збірки образів.
 - **Argo CD**: CD-інструмент для синхронізації стану кластера з Helm-чартом у Git.
+- **Результат виконання**
 
 ## Структура модулів
 - `s3-backend`: Створює S3 бакет та DynamoDB.
@@ -168,3 +169,111 @@ terraform destroy
 2. **CI Pipeline:** Jenkins перехоплює зміни, білдить образ через Kaniko і пушить в ECR.
 3. **GitOps Update:** Jenkins оновлює `values.yaml` новим тегом і комітить в репозиторій.
 4. **CD Pipeline:** Argo CD фіксує зміну в `values.yaml` і автоматично оновлює поди в EKS.
+
+## Результат виконання
+- Результат виконання команди `kubectl get all -n jenkins`:
+```terminaloutput
+NAME            READY   STATUS    RESTARTS   AGE
+pod/jenkins-0   2/2     Running   0          3h41m
+
+NAME                    TYPE           CLUSTER-IP      EXTERNAL-IP                                                                PORT(S)        AGE
+service/jenkins         LoadBalancer   172.20.5.26     ac2581b3cd3414884892284478d6edb6-1544852056.eu-north-1.elb.amazonaws.com   80:32164/TCP   3h41m
+service/jenkins-agent   ClusterIP      172.20.69.175   <none>                                                                     50000/TCP      3h41m
+
+NAME                       READY   AGE
+statefulset.apps/jenkins   1/1     3h41m
+```
+- Результат виконання команди `kubectl get all -n argocd`:
+```terminaloutput
+NAME                                                            READY   STATUS    RESTARTS   AGE
+pod/argo-cd-argocd-application-controller-0                     1/1     Running   0          6h59m
+pod/argo-cd-argocd-applicationset-controller-59cd8c8d4b-tjkjz   1/1     Running   0          6h59m
+pod/argo-cd-argocd-dex-server-7464fdb74b-5rp78                  1/1     Running   0          6h59m
+pod/argo-cd-argocd-notifications-controller-678957db85-lx2vl    1/1     Running   0          6h59m
+pod/argo-cd-argocd-redis-78767dfbf8-9rshf                       1/1     Running   0          6h59m
+pod/argo-cd-argocd-repo-server-65c8b55dbc-98fdq                 1/1     Running   0          6h59m
+pod/argo-cd-argocd-server-668bb5976d-vpjmv                      1/1     Running   0          6h59m
+
+NAME                                               TYPE           CLUSTER-IP      EXTERNAL-IP                                                                PORT(S)                      AGE
+service/argo-cd-argocd-applicationset-controller   ClusterIP      172.20.46.22    <none>                                                                     7000/TCP                     6h59m
+service/argo-cd-argocd-dex-server                  ClusterIP      172.20.70.104   <none>                                                                     5556/TCP,5557/TCP            6h59m
+service/argo-cd-argocd-redis                       ClusterIP      172.20.32.159   <none>                                                                     6379/TCP                     6h59m
+service/argo-cd-argocd-repo-server                 ClusterIP      172.20.86.75    <none>                                                                     8081/TCP                     6h59m
+service/argo-cd-argocd-server                      LoadBalancer   172.20.187.84   a978c11ff1fe3495d94df5dd8733887e-1744276081.eu-north-1.elb.amazonaws.com   80:30959/TCP,443:30576/TCP   6h59m
+
+NAME                                                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/argo-cd-argocd-applicationset-controller   1/1     1            1           6h59m
+deployment.apps/argo-cd-argocd-dex-server                  1/1     1            1           6h59m
+deployment.apps/argo-cd-argocd-notifications-controller    1/1     1            1           6h59m
+deployment.apps/argo-cd-argocd-redis                       1/1     1            1           6h59m
+deployment.apps/argo-cd-argocd-repo-server                 1/1     1            1           6h59m
+deployment.apps/argo-cd-argocd-server                      1/1     1            1           6h59m
+
+NAME                                                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/argo-cd-argocd-applicationset-controller-59cd8c8d4b   1         1         1       6h59m
+replicaset.apps/argo-cd-argocd-dex-server-7464fdb74b                  1         1         1       6h59m
+replicaset.apps/argo-cd-argocd-notifications-controller-678957db85    1         1         1       6h59m
+replicaset.apps/argo-cd-argocd-redis-78767dfbf8                       1         1         1       6h59m
+replicaset.apps/argo-cd-argocd-repo-server-65c8b55dbc                 1         1         1       6h59m
+replicaset.apps/argo-cd-argocd-server-668bb5976d                      1         1         1       6h59m
+
+NAME                                                     READY   AGE
+statefulset.apps/argo-cd-argocd-application-controller   1/1     6h59m
+```
+- Результат виконання команди `kubectl get all -n monitoring`:
+```
+NAME                                                            READY   STATUS    RESTARTS   AGE
+pod/alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   0          3h40m
+pod/kube-prometheus-stack-grafana-5b6465849f-b6xqb              3/3     Running   0          3h40m
+pod/kube-prometheus-stack-kube-state-metrics-65666b9d5c-hfswd   1/1     Running   0          3h40m
+pod/kube-prometheus-stack-operator-6548549b5-ddn7v              1/1     Running   0          3h40m
+pod/kube-prometheus-stack-prometheus-node-exporter-h5fgn        1/1     Running   0          3h40m
+pod/kube-prometheus-stack-prometheus-node-exporter-kxvc7        1/1     Running   0          3h40m
+pod/prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0          3h40m
+
+NAME                                                     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+service/alertmanager-operated                            ClusterIP   None             <none>        9093/TCP,9094/TCP,9094/UDP   3h40m
+service/kube-prometheus-stack-alertmanager               ClusterIP   172.20.107.223   <none>        9093/TCP,8080/TCP            3h40m
+service/kube-prometheus-stack-grafana                    ClusterIP   172.20.234.220   <none>        80/TCP                       3h40m
+service/kube-prometheus-stack-kube-state-metrics         ClusterIP   172.20.239.166   <none>        8080/TCP                     3h40m
+service/kube-prometheus-stack-operator                   ClusterIP   172.20.25.97     <none>        443/TCP                      3h40m
+service/kube-prometheus-stack-prometheus                 ClusterIP   172.20.236.171   <none>        9090/TCP,8080/TCP            3h40m
+service/kube-prometheus-stack-prometheus-node-exporter   ClusterIP   172.20.186.172   <none>        9100/TCP                     3h40m
+service/prometheus-operated                              ClusterIP   None             <none>        9090/TCP                     3h40m
+
+NAME                                                            DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+daemonset.apps/kube-prometheus-stack-prometheus-node-exporter   2         2         2       2            2           kubernetes.io/os=linux   3h40m
+
+NAME                                                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/kube-prometheus-stack-grafana              1/1     1            1           3h40m
+deployment.apps/kube-prometheus-stack-kube-state-metrics   1/1     1            1           3h40m
+deployment.apps/kube-prometheus-stack-operator             1/1     1            1           3h40m
+
+NAME                                                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/kube-prometheus-stack-grafana-5b6465849f              1         1         1       3h40m
+replicaset.apps/kube-prometheus-stack-kube-state-metrics-65666b9d5c   1         1         1       3h40m
+replicaset.apps/kube-prometheus-stack-operator-6548549b5              1         1         1       3h40m
+
+NAME                                                               READY   AGE
+statefulset.apps/alertmanager-kube-prometheus-stack-alertmanager   1/1     3h40m
+statefulset.apps/prometheus-kube-prometheus-stack-prometheus       1/1     3h40m
+```
+- Результат виконання команди `kubectl port-forward svc/jenkins 8080:80 -n jenkins`:
+```
+Forwarding from 127.0.0.1:8080 -> 8080
+Forwarding from [::1]:8080 -> 8080
+Handling connection for 8080
+```
+- Результат виконання команди `kubectl port-forward svc/argo-cd-argocd-server 8081:443 -n argocd`:
+```terminaloutput
+Forwarding from 127.0.0.1:8081 -> 8080
+Forwarding from [::1]:8081 -> 8080
+Handling connection for 8081
+```
+- Результат виконання команди `kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring`:
+```
+Forwarding from 127.0.0.1:3000 -> 3000
+Forwarding from [::1]:3000 -> 3000
+Handling connection for 3000
+```
+- Додано архів "terraform-debug.log.zip". В якому можна переглянути процес запуску.

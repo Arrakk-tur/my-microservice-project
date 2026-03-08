@@ -35,5 +35,5 @@ variable "max_connections" {
 
 variable "work_mem" {
   type    = string
-  default = "16MB"
+  default = "16384"
 }

@@ -49,7 +49,7 @@ resource "aws_iam_role" "django_pod_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "django_secrets_ptr" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSecretsManagerReadWrite" # Або кастомна вужча політика
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite" # Або кастомна вужча політика
   role       = aws_iam_role.django_pod_role.name
 }
 
@@ -109,10 +109,4 @@ resource "aws_iam_openid_connect_provider" "eks" {
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
   url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
-}
-
-# Додаємо EBS CSI Driver Addon (необхідно для StorageClass)
-resource "aws_eks_addon" "ebs_csi" {
-  cluster_name = aws_eks_cluster.main.name
-  addon_name   = "aws-ebs-csi-driver"
 }

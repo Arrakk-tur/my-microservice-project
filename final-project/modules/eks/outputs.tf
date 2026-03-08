@@ -10,3 +10,8 @@ output "node_security_group_id" {
   description = "Security Group ID of the EKS nodes"
   value       = aws_security_group.eks_nodes_sg.id
 }
+
+output "node_role_name" {
+  description = "Name of the node IAM role"
+  value       = aws_iam_role.node_group.name
+}

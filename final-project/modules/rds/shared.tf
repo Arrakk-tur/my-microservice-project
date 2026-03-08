@@ -26,16 +26,19 @@ resource "aws_db_parameter_group" "rds_pg" {
   parameter {
     name  = "max_connections"
     value = var.max_connections
+    apply_method = "pending-reboot"
   }
 
   parameter {
     name  = "work_mem"
     value = var.work_mem
+    apply_method = "pending-reboot"
   }
 
   parameter {
     name  = "log_statement"
     value = "all"
+    apply_method = "immediate"
   }
 }
 

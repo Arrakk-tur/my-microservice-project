@@ -1,7 +1,7 @@
 controller:
   admin:
     username: admin
-    password: {{ .Values.jenkins_admin_password }}
+    password: "placeholder_password"
 
   serviceType: LoadBalancer
   servicePort: 80
@@ -37,5 +37,6 @@ controller:
 
 agent:
   enabled: true
-  image: "jenkins/inbound-agent"
-  tag: "latest"
+  image:
+    repository: "jenkins/inbound-agent"
+    tag: "latest"

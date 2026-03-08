@@ -5,7 +5,7 @@ data "aws_caller_identity" "current" {}
 
 # AWS Secrets Manager для паролів
 resource "aws_secretsmanager_secret" "django_secrets" {
-  name        = "django-app-secrets-v2"
+  name        = "django-app-secrets-v3"
   description = "Secrets for Django App"
 }
 
@@ -36,6 +36,7 @@ resource "kubernetes_secret_v1" "argocd_repo_creds" {
     password = var.git_token
     username = var.git_username
   }
+  depends_on = [module.argo_cd]
 }
 
 # Підключаємо модуль S3 та DynamoDB
@@ -58,13 +59,13 @@ module "vpc" {
   public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   private_subnets    = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
   availability_zones = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
-  vpc_name           = "lesson-5-vpc"
+  vpc_name           = "fp-vpc"
 }
 
 # Підключаємо модуль ECR
 module "ecr" {
   source            = "./modules/ecr"
-  ecr_name          = "lesson-7-ecr"
+  ecr_name          = "fp-ecr"
   scan_on_push      = true
   cicd_role_arn     = data.aws_caller_identity.current.arn
   workload_role_arn = module.eks.node_role_arn # Вузли кластера
@@ -73,6 +74,7 @@ module "ecr" {
 # Підключаємо модуль EKS
 module "eks" {
   source     = "./modules/eks"
+  vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnet_ids
 }
 
@@ -111,10 +113,10 @@ resource "helm_release" "prometheus_stack" {
   version    = "65.2.0" # Стабільна версія
 
   # Вимикаємо дефолтні правила, якщо вузлів мало (економить ресурси t3.medium)
-  set {
+  set = [{
     name  = "defaultRules.create"
     value = "false"
-  }
+  }]
 
   depends_on = [module.eks]
 }
@@ -131,8 +133,8 @@ module "rds" {
   db_name         = "my_best_db"
   username        = "postgres_user"
   password        = var.django_db_pswd
-  engine_version  = "13.7"
-  family          = "postgres13"
+  engine_version  = "17.4"
+  family          = "postgres17"
   instance_class  = "db.t3.medium"
   max_connections = "200"
 }
@@ -149,28 +151,16 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
-    exec {
+    exec = {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
       args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
     }
   }
 }
-
-# provider "helm" {
-#   kubernetes = {
-#     host                   = module.eks.cluster_endpoint
-#     cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
-#     exec = {
-#       api_version = "client.authentication.k8s.io/v1beta1"
-#       command     = "aws"
-#       args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-#     }
-#   }
-# }
 
 # Встановлюємо Metrics Server
 resource "helm_release" "metrics_server" {
@@ -187,10 +177,10 @@ resource "helm_release" "secrets_csi_driver" {
   repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
   chart      = "secrets-store-csi-driver"
   namespace  = "kube-system"
-  set {
+  set = [{
     name  = "syncSecret.enabled"
     value = "true"
-  }
+  }]
 }
 
 # Встановлення AWS Provider для драйвера
@@ -199,12 +189,20 @@ resource "helm_release" "aws_secrets_manager_provider" {
   repository = "https://aws.github.io/secrets-store-csi-driver-provider-aws"
   chart      = "secrets-store-csi-driver-provider-aws"
   namespace  = "kube-system"
+
+  depends_on = [helm_release.secrets_csi_driver]
+  set = [
+    {
+      name  = "secrets-store-csi-driver.install"
+      value = "false"
+    }
+  ]
 }
 
 # Додаткові права для EKS Nodes (S3 + Secrets Manager)
 resource "aws_iam_role_policy" "node_additional_perms" {
   name = "eks-node-additional-perms"
-  role = module.eks.node_role_arn
+  role = module.eks.node_role_name
 
   policy = jsonencode({
     Version = "2012-10-17"

@@ -31,12 +31,15 @@ resource "helm_release" "argo_apps" {
   namespace  = var.namespace
   create_namespace = true
 
-  set {
-    name  = "repoURL"
-    value = var.git_repo
-  }
-  # values = [
-  #   file("${path.module}/values.yaml")
-  # ]
+  set = [
+    {
+      name  = "repoURL"
+      value = var.git_repo
+    },
+    {
+      name  = "s3BucketName"
+      value = var.s3_bucket_name
+    }
+  ]
   depends_on = [null_resource.wait_for_argo_crds]
 }
