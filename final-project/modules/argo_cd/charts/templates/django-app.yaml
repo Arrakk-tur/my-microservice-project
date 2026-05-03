@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: django-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL | quote }} # Тепер береться з Terraform
+    targetRevision: HEAD
+    path: "charts/django-app" # Шлях до чарту в монорепозиторії
+    helm:
+      parameters:
+        # Передаємо створений S3 бакет безпосередньо в конфігурацію Django
+        - name: "env.AWS_STORAGE_BUCKET_NAME"
+          value: {{ .Values.s3BucketName | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

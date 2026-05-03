@@ -1,0 +1,39 @@
+replicaCount: 2
+
+image:
+  repository: "" # Сюди вставити URL з outputs ECR модуля
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPU: 70
+
+# Секція для секретів (значення прийдуть з Terraform)
+secrets:
+  secretKey: ""
+  dbPassword: ""
+
+env:
+  DEBUG: "1"
+  USE_AWS_S3: "1"
+  AWS_STORAGE_BUCKET_NAME:  # Зміни на назву з Terraform
+  ALLOWED_HOSTS: "*" # Для тесту, пізніше замінити на DNS балансувальника
+  DATABASE_NAME: "my_best_db"
+  DATABASE_USER: "postgres_user"
+  DATABASE_HOST: "db"
+  DATABASE_PORT: "5432"

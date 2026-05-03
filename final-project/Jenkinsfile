@@ -1,0 +1,62 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins-sa
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:v1.9.1-debug
+    command: ["sleep"]
+    args: ["9999999"]
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+"""
+        }
+    }
+
+    parameters {
+        string(name: 'ECR_URL', defaultValue: '722326487497.dkr.ecr.eu-north-1.amazonaws.com/fp-ecr', description: 'ECR Repository URL')
+        string(name: 'REPO_URL', defaultValue: 'github.com/your-user/your-monorepo.git', description: 'Git Ops Repo URL')
+    }
+
+    stages {
+        stage('Build & Push') {
+            when { changeset "django/**" }
+            steps {
+                container('kaniko') {
+                    // Створюємо конфіг для автентифікації в ECR через IAM Role
+                    sh """
+                    echo '{"credsStore":"ecr-login"}' > /kaniko/.docker/config.json
+                    /kaniko/executor --context ${WORKSPACE}/django \
+                        --dockerfile ${WORKSPACE}/django/Dockerfile \
+                        --destination ${params.ECR_URL}:${BUILD_NUMBER} \
+                        --destination ${params.ECR_URL}:latest
+                    """
+                }
+            }
+        }
+
+        stage('Update Git Manifest') {
+            when { changeset "django/**" }
+            steps {
+                // Використовуємо токен, який Argo CD теж юзає (треба створити в Jenkins з ID 'github-token')
+                withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GIT_TOKEN', usernameVariable: 'GIT_USER')]) {
+                    sh """
+                        git config user.email "jenkins@example.com"
+                        git config user.name "Jenkins CI"
+
+                        sed -i 's|repository: .*|repository: "${params.ECR_URL}"|' charts/django-app/values.yaml
+                        sed -i 's/tag: .*/tag: "${BUILD_NUMBER}"/' charts/django-app/values.yaml
+
+                        git add charts/django-app/values.yaml
+                        git commit -m "chore: update image tag to ${BUILD_NUMBER} [skip ci]"
+                        git push https://${GIT_USER}:${GIT_TOKEN}@${params.REPO_URL} HEAD:main
+                    """
+                }
+            }
+        }
+    }
+}
